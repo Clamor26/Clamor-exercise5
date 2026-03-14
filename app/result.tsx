@@ -57,7 +57,7 @@ export default function ResultScreen() {
       <Text style={styles.text}>High Score: {highScore}</Text>
       <Button
         title="Back to Home"
-        onPress={() => router.navigate("index" as any)}
+        onPress={() => router.replace("/")}
       />
     </View>
   );
