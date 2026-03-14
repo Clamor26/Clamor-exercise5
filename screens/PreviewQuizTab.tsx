@@ -116,6 +116,21 @@ export default function PreviewQuizTab({ navigation }: Props) {
         </Text>
       </View>
 
+      {/* Progress Indicator */}
+      <View style={styles.progressContainer}>
+        <Text style={styles.progressText}>
+          Question {currentIndex + 1} of {questions.length}
+        </Text>
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${((currentIndex + 1) / questions.length) * 100}%` },
+            ]}
+          />
+        </View>
+      </View>
+
       <Text style={styles.question}>
         {currentIndex + 1}. {currentQuestion.question}
       </Text>
@@ -177,6 +192,28 @@ const styles = StyleSheet.create({
   timerLabel: { fontSize: 16, marginBottom: 5 },
   timer: { fontSize: 32, fontWeight: "bold", color: "green" },
   timerDanger: { color: "red" },
+  progressContainer: {
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  progressText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 10,
+    color: "#333",
+  },
+  progressBar: {
+    width: "100%",
+    height: 8,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#0288d1",
+    borderRadius: 4,
+  },
   question: { fontSize: 20, marginBottom: 15, fontWeight: "600" },
   choice: {
     padding: 12,
