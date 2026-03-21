@@ -215,10 +215,7 @@ export default function QuizScreen() {
 
   const handleFinish = () => {
     const score = calculateScore();
-    router.navigate({
-      pathname: "result" as any,
-      params: { score: score.toString() },
-    });
+    router.push(`/result?score=${score}`);
   };
 
   const handleAddNew = () => {

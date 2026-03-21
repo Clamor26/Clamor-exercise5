@@ -9,9 +9,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    backgroundColor: "#000",
   },
-  title: { fontSize: 28, marginBottom: 20 },
-  text: { fontSize: 18, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20, color: "white" },
+  text: { fontSize: 18, marginBottom: 10, color: "white" },
 });
 
 export default function ResultScreen() {
