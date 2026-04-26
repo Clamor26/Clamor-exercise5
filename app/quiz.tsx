@@ -1,6 +1,8 @@
+import { Colors } from "@/constants/theme";
 import { Question, QuestionType, useQuiz } from "@/screens/QuizContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Alert, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 const styles = StyleSheet.create({
@@ -120,10 +122,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
 });
 
 export default function QuizScreen() {
   const { questions, timer, setTimer, addQuestion, editQuestion, deleteQuestion } = useQuiz();
+  const colorScheme = useColorScheme() ?? "light";
+  const palette = Colors[colorScheme];
+  const borderSubtle = colorScheme === "dark" ? "#444" : "#ddd";
+  const tabBarBg = colorScheme === "dark" ? "#252526" : "#f0f0f0";
+  const tabActiveBg = colorScheme === "dark" ? "#2d2d30" : "#fff";
+  const choiceBg = colorScheme === "dark" ? "#252526" : "#eee";
+  const choiceSelectedBg = colorScheme === "dark" ? "#1a3d52" : "#b3e5fc";
   const [activeTab, setActiveTab] = useState<"preview" | "settings">("preview");
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string | string[]>>({});
@@ -143,21 +153,6 @@ export default function QuizScreen() {
   React.useEffect(() => {
     setTimeRemaining(timer);
   }, [timer]);
-
-  React.useEffect(() => {
-    if (activeTab !== "preview") return;
-    
-    if (timeRemaining <= 0) {
-      handleFinish();
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timeRemaining, activeTab]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -190,7 +185,7 @@ export default function QuizScreen() {
     }
   };
 
-  const calculateScore = (): number => {
+  const calculateScore = useCallback((): number => {
     let score = 0;
 
     questions.forEach((q) => {
@@ -211,12 +206,27 @@ export default function QuizScreen() {
     });
 
     return score;
-  };
+  }, [questions, selectedAnswers]);
 
-  const handleFinish = () => {
+  const handleFinish = useCallback(() => {
     const score = calculateScore();
     router.push(`/result?score=${score}`);
-  };
+  }, [calculateScore]);
+
+  React.useEffect(() => {
+    if (activeTab !== "preview") return;
+
+    if (timeRemaining <= 0) {
+      handleFinish();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeRemaining, activeTab, handleFinish]);
 
   const handleAddNew = () => {
     setEditingId(null);
@@ -233,7 +243,9 @@ export default function QuizScreen() {
   const handleEdit = (question: Question) => {
     setEditingId(question.id);
     setFormData(question);
-    setShowForm(true);    settingsScrollRef.current?.scrollTo({ y: 0, animated: true });  };
+    setShowForm(true);
+    settingsScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
 
   const handleSave = () => {
     if (!formData.question?.trim()) {
@@ -292,48 +304,62 @@ export default function QuizScreen() {
 
   if (!currentQuestion && activeTab === "preview") {
     return (
-      <View style={styles.container}>
-        <View style={styles.tabBar}>
+      <View style={[styles.container, { backgroundColor: palette.background }]}>
+        <View style={[styles.tabBar, { backgroundColor: tabBarBg, borderBottomColor: borderSubtle }]}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "preview" && styles.activeTab]}
-            onPress={() => setActiveTab("preview")}
-          >
-            <Text style={[styles.tabText, activeTab === "preview" && styles.activeTabText]}>
-              Preview Quiz
-            </Text>
+            style={[styles.tab, styles.activeTab, { backgroundColor: tabActiveBg, borderBottomColor: palette.tint }]}
+            onPress={() => setActiveTab("preview")}>
+            <Text style={[styles.tabText, styles.activeTabText, { color: palette.tint }]}>Preview Quiz</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "settings" && styles.activeTab]}
-            onPress={() => setActiveTab("settings")}
-          >
-            <Text style={[styles.tabText, activeTab === "settings" && styles.activeTabText]}>
-              Quiz Settings
-            </Text>
+          <TouchableOpacity style={styles.tab} onPress={() => setActiveTab("settings")}>
+            <Text style={[styles.tabText, { color: palette.icon }]}>Quiz Settings</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.content, styles.padding]}>
-          <Text style={styles.title}>No questions available</Text>
+          <Text style={[styles.title, { color: palette.text }]}>No questions available</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tabBar}>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.tabBar, { backgroundColor: tabBarBg, borderBottomColor: borderSubtle }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "preview" && styles.activeTab]}
-          onPress={() => setActiveTab("preview")}
-        >
-          <Text style={[styles.tabText, activeTab === "preview" && styles.activeTabText]}>
+          style={[
+            styles.tab,
+            activeTab === "preview" && [
+              styles.activeTab,
+              { backgroundColor: tabActiveBg, borderBottomColor: palette.tint },
+            ],
+          ]}
+          onPress={() => setActiveTab("preview")}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "preview"
+                ? [styles.activeTabText, { color: palette.tint }]
+                : { color: palette.icon },
+            ]}>
             Preview Quiz
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "settings" && styles.activeTab]}
-          onPress={() => setActiveTab("settings")}
-        >
-          <Text style={[styles.tabText, activeTab === "settings" && styles.activeTabText]}>
+          style={[
+            styles.tab,
+            activeTab === "settings" && [
+              styles.activeTab,
+              { backgroundColor: tabActiveBg, borderBottomColor: palette.tint },
+            ],
+          ]}
+          onPress={() => setActiveTab("settings")}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "settings"
+                ? [styles.activeTabText, { color: palette.tint }]
+                : { color: palette.icon },
+            ]}>
             Quiz Settings
           </Text>
         </TouchableOpacity>
@@ -342,14 +368,18 @@ export default function QuizScreen() {
       <View style={styles.content}>
         {activeTab === "preview" ? (
           <ScrollView contentContainerStyle={styles.padding}>
-            <View style={styles.timerContainer}>
-              <Text style={styles.timerLabel}>Time Remaining:</Text>
-              <Text style={[styles.timer, timeRemaining < 60 && styles.timerDanger]}>
+            <View style={[styles.timerContainer, { backgroundColor: colorScheme === "dark" ? "#2a2a2a" : "#f0f0f0" }]}>
+              <Text style={[styles.timerLabel, { color: palette.text }]}>Time Remaining:</Text>
+                <Text
+                  style={[
+                    styles.timer,
+                    { color: timeRemaining < 60 ? "#ff6b6b" : colorScheme === "dark" ? "#7bed9f" : "green" },
+                  ]}>
                 {formatTime(timeRemaining)}
               </Text>
             </View>
 
-            <Text style={styles.question}>
+            <Text style={[styles.question, { color: palette.text }]}>
               {currentIndex + 1}. {currentQuestion?.question}
             </Text>
 
@@ -363,10 +393,16 @@ export default function QuizScreen() {
                 return (
                   <TouchableOpacity
                     key={key}
-                    style={[styles.choice, isSelected && styles.choiceSelected]}
-                    onPress={() => handleSelect(key)}
-                  >
-                    <Text style={isSelected ? styles.selectedText : {}}>
+                    style={[
+                      styles.choice,
+                      {
+                        backgroundColor: isSelected ? choiceSelectedBg : choiceBg,
+                        borderWidth: 1,
+                        borderColor: isSelected ? palette.tint : borderSubtle,
+                      },
+                    ]}
+                    onPress={() => handleSelect(key)}>
+                    <Text style={[{ color: palette.text }, isSelected && styles.selectedText]}>
                       {key}. {value}
                     </Text>
                   </TouchableOpacity>
@@ -375,22 +411,27 @@ export default function QuizScreen() {
             )}
 
             <View style={styles.navigation}>
-              <TouchableOpacity
+                <TouchableOpacity
                 disabled={currentIndex === 0}
                 onPress={() => setCurrentIndex(currentIndex - 1)}
               >
-                <Text style={[styles.navBtn, currentIndex === 0 && styles.disabled]}>
+                <Text
+                  style={[
+                    styles.navBtn,
+                    { color: palette.tint },
+                    currentIndex === 0 && { color: palette.icon, opacity: 0.45 },
+                  ]}>
                   Previous
                 </Text>
               </TouchableOpacity>
 
               {currentIndex === questions.length - 1 ? (
                 <TouchableOpacity onPress={handleFinish}>
-                  <Text style={styles.navBtn}>Finish</Text>
+                  <Text style={[styles.navBtn, { color: palette.tint }]}>Finish</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity onPress={() => setCurrentIndex(currentIndex + 1)}>
-                  <Text style={styles.navBtn}>Next</Text>
+                  <Text style={[styles.navBtn, { color: palette.tint }]}>Next</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -398,63 +439,109 @@ export default function QuizScreen() {
         ) : (
           <ScrollView ref={settingsScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.padding}>
             {showForm && (
-              <View style={styles.timerSection}>
-                <Text style={styles.sectionTitle}>
+              <View style={[styles.timerSection, { backgroundColor: colorScheme === "dark" ? "#2a2a2a" : "#f5f5f5" }]}>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>
                   {editingId ? "Edit Question" : "Add New Question"}
                 </Text>
 
-                <Text style={styles.label}>Question Type:</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Question Type:</Text>
                 <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
                   {(["multiple", "truefalse", "checkbox"] as QuestionType[]).map((type) => (
                     <TouchableOpacity
                       key={type}
                       style={[
-                        { flex: 1, padding: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 5, alignItems: "center" },
+                        {
+                          flex: 1,
+                          padding: 8,
+                          borderWidth: 1,
+                          borderColor: borderSubtle,
+                          borderRadius: 5,
+                          alignItems: "center",
+                          backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "transparent",
+                        },
                         formData.type === type && { backgroundColor: "#0288d1", borderColor: "#0288d1" },
                       ]}
                       onPress={() => setFormData({ ...formData, type })}
                     >
-                      <Text style={formData.type === type ? { color: "#fff", fontWeight: "bold", fontSize: 12 } : { color: "#666", fontSize: 12 }}>
+                      <Text
+                  style={
+                    formData.type === type
+                      ? { color: "#fff", fontWeight: "bold", fontSize: 12 }
+                      : { color: palette.icon, fontSize: 12 }
+                  }>
                         {type}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
 
-                <Text style={styles.label}>Question:</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Question:</Text>
                 <TextInput
-                  style={[styles.timerInput, { minHeight: 100, textAlignVertical: "top" }]}
+                  style={[
+                    styles.timerInput,
+                    {
+                      minHeight: 100,
+                      textAlignVertical: "top",
+                      color: palette.text,
+                      backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#fff",
+                      borderColor: borderSubtle,
+                    },
+                  ]}
                   placeholder="Enter question"
+                  placeholderTextColor={palette.icon}
                   value={formData.question}
                   onChangeText={(text) => setFormData({ ...formData, question: text })}
                   multiline
                 />
 
-                <Text style={styles.label}>Choices:</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Choices:</Text>
                 {formData.choices && Object.entries(formData.choices).map(([key, value]) => (
                   <View key={key} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <Text style={{ fontWeight: "bold", width: 30, marginRight: 8 }}>{key}:</Text>
+                    <Text style={{ fontWeight: "bold", width: 30, marginRight: 8, color: palette.text }}>{key}:</Text>
                     <TextInput
-                      style={[styles.timerInput, { flex: 1, marginBottom: 0 }]}
+                      style={[
+                        styles.timerInput,
+                        {
+                          flex: 1,
+                          marginBottom: 0,
+                          color: palette.text,
+                          backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#fff",
+                          borderColor: borderSubtle,
+                        },
+                      ]}
                       placeholder={`Choice ${key}`}
+                      placeholderTextColor={palette.icon}
                       value={value}
                       onChangeText={(text) => updateChoice(key, text)}
                     />
                   </View>
                 ))}
 
-                <Text style={styles.label}>Correct Answer:</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Correct Answer:</Text>
                 <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
                   {formData.choices && Object.keys(formData.choices).map((key) => (
                     <TouchableOpacity
                       key={key}
                       style={[
-                        { flex: 1, padding: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 5, alignItems: "center" },
+                        {
+                          flex: 1,
+                          padding: 8,
+                          borderWidth: 1,
+                          borderColor: borderSubtle,
+                          borderRadius: 5,
+                          alignItems: "center",
+                          backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "transparent",
+                        },
                         formData.answer === key && { backgroundColor: "#4CAF50", borderColor: "#4CAF50" },
                       ]}
                       onPress={() => setFormData({ ...formData, answer: key })}
                     >
-                      <Text style={formData.answer === key ? { color: "#fff", fontWeight: "bold" } : { color: "#666", fontWeight: "bold" }}>
+                      <Text
+                        style={
+                          formData.answer === key
+                            ? { color: "#fff", fontWeight: "bold" }
+                            : { color: palette.icon, fontWeight: "bold" }
+                        }>
                         {key}
                       </Text>
                     </TouchableOpacity>
@@ -475,36 +562,51 @@ export default function QuizScreen() {
               </View>
             )}
 
-            <View style={styles.timerSection}>
-              <Text style={styles.sectionTitle}>Quiz Timer (seconds)</Text>
+            <View style={[styles.timerSection, { backgroundColor: colorScheme === "dark" ? "#2a2a2a" : "#f5f5f5" }]}>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>Quiz Timer (seconds)</Text>
               <TextInput
-                style={styles.timerInput}
+                style={[
+                  styles.timerInput,
+                  {
+                    color: palette.text,
+                    backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#fff",
+                    borderColor: borderSubtle,
+                  },
+                ]}
                 placeholder="Enter timer in seconds"
+                placeholderTextColor={palette.icon}
                 keyboardType="numeric"
                 value={timer.toString()}
                 onChangeText={(text) => setTimer(parseInt(text) || 300)}
               />
-              <Text style={styles.timerInfo}>
+              <Text style={[styles.timerInfo, { color: palette.icon }]}>
                 Current: {Math.floor(timer / 60)}m {timer % 60}s
               </Text>
             </View>
 
             <View style={styles.questionListSection}>
-              <Text style={styles.sectionTitle}>Questions Management</Text>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>Questions Management</Text>
 
               {questions.length === 0 ? (
-                <Text style={styles.emptyText}>No questions added yet</Text>
+                <Text style={[styles.emptyText, { color: palette.icon }]}>No questions added yet</Text>
               ) : (
                 <FlatList
                   scrollEnabled={false}
                   data={questions}
                   keyExtractor={(item) => item.id.toString()}
                   renderItem={({ item }) => (
-                    <View style={styles.questionItem}>
+                    <View
+                      style={[
+                        styles.questionItem,
+                        {
+                          backgroundColor: colorScheme === "dark" ? "#1e1e1e" : "#fff",
+                          borderColor: colorScheme === "dark" ? "#444" : "#ddd",
+                        },
+                      ]}>
                       <View style={styles.questionContent}>
-                        <Text style={styles.questionNumber}>Q{item.id}:</Text>
-                        <Text style={styles.questionText}>{item.question}</Text>
-                        <Text style={styles.questionType}>Type: {item.type}</Text>
+                        <Text style={[styles.questionNumber, { color: palette.tint }]}>Q{item.id}:</Text>
+                        <Text style={[styles.questionText, { color: palette.text }]}>{item.question}</Text>
+                        <Text style={[styles.questionType, { color: palette.icon }]}>Type: {item.type}</Text>
                       </View>
                       <View style={styles.actions}>
                         <TouchableOpacity
@@ -530,83 +632,6 @@ export default function QuizScreen() {
               </TouchableOpacity>
             </View>
 
-            {showForm && (
-              <View style={styles.timerSection}>
-                <Text style={styles.sectionTitle}>
-                  {editingId ? "Edit Question" : "Add New Question"}
-                </Text>
-
-                <Text style={styles.label}>Question Type:</Text>
-                <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-                  {(["multiple", "truefalse", "checkbox"] as QuestionType[]).map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        { flex: 1, padding: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 5, alignItems: "center" },
-                        formData.type === type && { backgroundColor: "#0288d1", borderColor: "#0288d1" },
-                      ]}
-                      onPress={() => setFormData({ ...formData, type })}
-                    >
-                      <Text style={formData.type === type ? { color: "#fff", fontWeight: "bold", fontSize: 12 } : { color: "#666", fontSize: 12 }}>
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.label}>Question:</Text>
-                <TextInput
-                  style={[styles.timerInput, { minHeight: 100, textAlignVertical: "top" }]}
-                  placeholder="Enter question"
-                  value={formData.question}
-                  onChangeText={(text) => setFormData({ ...formData, question: text })}
-                  multiline
-                />
-
-                <Text style={styles.label}>Choices:</Text>
-                {formData.choices && Object.entries(formData.choices).map(([key, value]) => (
-                  <View key={key} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <Text style={{ fontWeight: "bold", width: 30, marginRight: 8 }}>{key}:</Text>
-                    <TextInput
-                      style={[styles.timerInput, { flex: 1, marginBottom: 0 }]}
-                      placeholder={`Choice ${key}`}
-                      value={value}
-                      onChangeText={(text) => updateChoice(key, text)}
-                    />
-                  </View>
-                ))}
-
-                <Text style={styles.label}>Correct Answer:</Text>
-                <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-                  {formData.choices && Object.keys(formData.choices).map((key) => (
-                    <TouchableOpacity
-                      key={key}
-                      style={[
-                        { flex: 1, padding: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 5, alignItems: "center" },
-                        formData.answer === key && { backgroundColor: "#4CAF50", borderColor: "#4CAF50" },
-                      ]}
-                      onPress={() => setFormData({ ...formData, answer: key })}
-                    >
-                      <Text style={formData.answer === key ? { color: "#fff", fontWeight: "bold" } : { color: "#666", fontWeight: "bold" }}>
-                        {key}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 15 }}>
-                  <TouchableOpacity style={[{ flex: 1, backgroundColor: "#4CAF50", padding: 12, borderRadius: 5 }]} onPress={handleSave}>
-                    <Text style={{ color: "#fff", fontWeight: "bold", textAlign: "center" }}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[{ flex: 1, backgroundColor: "#999", padding: 12, borderRadius: 5 }]}
-                    onPress={() => setShowForm(false)}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "bold", textAlign: "center" }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
           </ScrollView>
         )}
       </View>

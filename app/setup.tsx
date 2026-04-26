@@ -12,7 +12,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
+
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '../contexts/AuthContext';
 
 const setupSchema = z.object({
@@ -27,6 +32,9 @@ export default function SetupScreen() {
   const { setupAccount } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
 
   const {
     control,
@@ -49,27 +57,45 @@ export default function SetupScreen() {
     }
   };
 
+  const inputColors = (hasError?: boolean) => ({
+    borderColor: hasError ? '#ff4444' : colorScheme === 'dark' ? '#555' : '#ccc',
+    backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+    color: palette.text,
+  });
+
   const onSubmit = async (data: SetupForm) => {
     setLoading(true);
     try {
-      await setupAccount(data.firstName, data.lastName, profilePhoto || undefined, data.homepageRedirect || undefined);
-
-    } catch (error) {
+      await setupAccount(
+        data.firstName,
+        data.lastName,
+        profilePhoto || undefined,
+        data.homepageRedirect || undefined
+      );
+    } catch (err) {
       Alert.alert('Setup failed', 'Please try again');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Setup Account</Text>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.themeCorner, { top: insets.top + 8, right: insets.right + 12 }]}>
+        <ThemeToggle />
+      </View>
+      <Text style={[styles.title, { color: palette.text }]}>Setup Account</Text>
       {profilePhoto ? (
         <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
       ) : (
-        <TouchableOpacity style={styles.profilePhotoPlaceholder} onPress={pickImage}>
-          <Text style={styles.placeholderText}>Tap to add profile photo</Text>
+        <TouchableOpacity
+          style={[
+            styles.profilePhotoPlaceholder,
+            { borderColor: colorScheme === 'dark' ? '#666' : '#ddd' },
+          ]}
+          onPress={pickImage}>
+          <Text style={[styles.placeholderText, { color: palette.icon }]}>Tap to add profile photo</Text>
         </TouchableOpacity>
       )}
       <Controller
@@ -78,8 +104,9 @@ export default function SetupScreen() {
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.firstName && styles.inputError]}
+              style={[styles.input, inputColors(!!errors.firstName)]}
               placeholder="First Name"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
             />
@@ -93,8 +120,9 @@ export default function SetupScreen() {
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.lastName && styles.inputError]}
+              style={[styles.input, inputColors(!!errors.lastName)]}
               placeholder="Last Name"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
             />
@@ -107,22 +135,22 @@ export default function SetupScreen() {
         name="homepageRedirect"
         render={({ field: { onChange, value } }) => (
           <TextInput
-            style={styles.input}
+            style={[styles.input, inputColors()]}
             placeholder="Homepage URL (optional)"
+            placeholderTextColor={palette.icon}
             value={value}
             onChangeText={onChange}
           />
         )}
       />
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+        style={[styles.button, { backgroundColor: palette.tint }, loading && styles.buttonDisabled]}
         onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      >
+        disabled={loading}>
         {loading ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={palette.textOnTint} />
         ) : (
-          <Text style={styles.buttonText}>Complete Setup</Text>
+          <Text style={[styles.buttonText, { color: palette.textOnTint }]}>Complete Setup</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -136,11 +164,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  themeCorner: {
+    position: 'absolute',
+    zIndex: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: 'white',
   },
   profilePhoto: {
     width: 100,
@@ -153,7 +184,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 2,
-    borderColor: '#ddd',
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
@@ -161,43 +191,33 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
   },
   input: {
     width: '100%',
     padding: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     marginBottom: 10,
     fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'white',
-  },
-  inputError: {
-    borderColor: '#ff4444',
   },
   errorText: {
-    color: '#ff4444',
+    color: '#ff6666',
     fontSize: 12,
     marginBottom: 10,
   },
   button: {
     width: '100%',
     padding: 15,
-    backgroundColor: '#007AFF',
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   buttonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
 });
-

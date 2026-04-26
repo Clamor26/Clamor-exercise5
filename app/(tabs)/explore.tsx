@@ -67,9 +67,11 @@ export default function TabTwoScreen() {
       </Collapsible>
       <Collapsible title="Light and dark mode components">
         <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+          The app uses React Context (<ThemedText type="defaultSemiBold">ThemeProvider</ThemedText>)
+          with persisted light and dark themes. Use the sun/moon control in the screen header to
+          switch themes. The <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook
+          reflects the selected theme so components like{' '}
+          <ThemedText type="defaultSemiBold">ThemedText</ThemedText> stay in sync.
         </ThemedText>
         <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
           <ThemedText type="link">Learn more</ThemedText>

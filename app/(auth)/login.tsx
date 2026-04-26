@@ -9,7 +9,7 @@ export default function LoginRedirect() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/index');
+      router.replace('/');
     } else {
       router.replace('/login');
     }

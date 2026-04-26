@@ -16,14 +16,18 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    /** Use on filled buttons where `backgroundColor` is `tint` */
+    textOnTint: '#ffffff',
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
+    /** Accent on headers/icons; filled buttons use `textOnTint` for label contrast */
     tint: tintColorDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    textOnTint: '#11181C',
   },
 };
 

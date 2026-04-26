@@ -8,7 +8,7 @@ export default function AuthLayout() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/index');
+      router.replace('/');
     }
   }, [isAuthenticated]);
 

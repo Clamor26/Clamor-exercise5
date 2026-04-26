@@ -3,9 +3,13 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import { useAuth } from '../contexts/AuthContext';
 
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '../contexts/AuthContext';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -15,8 +19,11 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
 
   const {
     control,
@@ -26,14 +33,11 @@ export default function LoginScreen() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Auto-redirect disabled - login page stays visible
-
-
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     try {
       await login(data.email, data.password);
-    } catch (error) {
+    } catch {
       Alert.alert('Login failed', 'Please try again');
     } finally {
       setLoading(false);
@@ -41,16 +45,28 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.themeCorner, { top: insets.top + 8, right: insets.right + 12 }]}>
+        <ThemeToggle />
+      </View>
+      <Text style={[styles.title, { color: palette.text }]}>Login</Text>
       <Controller
         control={control}
         name="email"
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              style={[
+                styles.input,
+                {
+                  borderColor: colorScheme === 'dark' ? '#555' : '#ccc',
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                  color: palette.text,
+                },
+                errors.email && styles.inputError,
+              ]}
               placeholder="Email"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
               keyboardType="email-address"
@@ -66,8 +82,17 @@ export default function LoginScreen() {
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
+              style={[
+                styles.input,
+                {
+                  borderColor: colorScheme === 'dark' ? '#555' : '#ccc',
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                  color: palette.text,
+                },
+                errors.password && styles.inputError,
+              ]}
               placeholder="Password"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
               secureTextEntry
@@ -77,21 +102,17 @@ export default function LoginScreen() {
         )}
       />
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+        style={[styles.button, { backgroundColor: palette.tint }, loading && styles.buttonDisabled]}
         onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      >
+        disabled={loading}>
         {loading ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={palette.textOnTint} />
         ) : (
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={[styles.buttonText, { color: palette.textOnTint }]}>Login</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.link}
-        onPress={() => router.push('/register')}
-      >
-        <Text style={styles.linkText}>Don't have an account? Register</Text>
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/register')}>
+        <Text style={[styles.linkText, { color: palette.tint }]}>{"Don't have an account? Register"}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -104,24 +125,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  themeCorner: {
+    position: 'absolute',
+    zIndex: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 30,
-    color: 'white',
   },
   input: {
     width: '100%',
     padding: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     marginBottom: 10,
     fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'white',
   },
-
   inputError: {
     borderColor: '#ff4444',
   },
@@ -133,17 +153,14 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     padding: 15,
-    backgroundColor: '#007AFF',
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
   },
-
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   buttonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -151,8 +168,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   linkText: {
-    color: 'white',
     fontSize: 16,
   },
 });
-

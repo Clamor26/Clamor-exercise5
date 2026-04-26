@@ -3,24 +3,42 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
+
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '../contexts/AuthContext';
 
-
-const registerSchema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
+const registerSchema = z
+  .object({
+    email: z.string().email('Invalid email'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 type RegisterForm = z.infer<typeof registerSchema>;
+
+const inputStyle = (palette: (typeof Colors)['light'], scheme: 'light' | 'dark', hasError?: boolean) => [
+  styles.input,
+  {
+    borderColor: hasError ? '#ff4444' : scheme === 'dark' ? '#555' : '#ccc',
+    backgroundColor: scheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+    color: palette.text,
+  },
+];
 
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
 
   const {
     control,
@@ -34,7 +52,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(data.email, data.password);
-    } catch (error) {
+    } catch {
       Alert.alert('Registration failed', 'Please try again');
     } finally {
       setLoading(false);
@@ -42,16 +60,20 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.themeCorner, { top: insets.top + 8, right: insets.right + 12 }]}>
+        <ThemeToggle />
+      </View>
+      <Text style={[styles.title, { color: palette.text }]}>Register</Text>
       <Controller
         control={control}
         name="email"
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              style={inputStyle(palette, colorScheme, !!errors.email)}
               placeholder="Email"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
               keyboardType="email-address"
@@ -67,8 +89,9 @@ export default function RegisterScreen() {
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
+              style={inputStyle(palette, colorScheme, !!errors.password)}
               placeholder="Password"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
               secureTextEntry
@@ -83,32 +106,31 @@ export default function RegisterScreen() {
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              style={[styles.input, errors.confirmPassword && styles.inputError]}
+              style={inputStyle(palette, colorScheme, !!errors.confirmPassword)}
               placeholder="Confirm Password"
+              placeholderTextColor={palette.icon}
               value={value}
               onChangeText={onChange}
               secureTextEntry
             />
-            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
+            )}
           </>
         )}
       />
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+        style={[styles.button, { backgroundColor: palette.tint }, loading && styles.buttonDisabled]}
         onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      >
+        disabled={loading}>
         {loading ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={palette.textOnTint} />
         ) : (
-          <Text style={styles.buttonText}>Register</Text>
+          <Text style={[styles.buttonText, { color: palette.textOnTint }]}>Register</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.link}
-        onPress={() => router.push('/login')}
-      >
-        <Text style={styles.linkText}>Already have an account? Login</Text>
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/login')}>
+        <Text style={[styles.linkText, { color: palette.tint }]}>Already have an account? Login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -121,26 +143,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  themeCorner: {
+    position: 'absolute',
+    zIndex: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 30,
-    color: 'white',
   },
   input: {
     width: '100%',
     padding: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     marginBottom: 10,
     fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'white',
-  },
-
-  inputError: {
-    borderColor: '#ff4444',
   },
   errorText: {
     color: '#ff6666',
@@ -150,17 +168,14 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     padding: 15,
-    backgroundColor: '#007AFF',
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
   },
-
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   buttonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -168,8 +183,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   linkText: {
-    color: 'white',
     fontSize: 16,
   },
 });
-
