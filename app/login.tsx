@@ -1,26 +1,23 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import React from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Controller, FieldErrors, useForm } from 'react-hook-form';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { z } from 'zod';
 
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '../contexts/AuthContext';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = {
+  email: string;
+  password: string;
+};
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -30,18 +27,53 @@ export default function LoginScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   });
 
   const onSubmit = async (data: LoginForm) => {
+    const email = data.email.trim();
+    const password = data.password.trim();
+
+    if (!email || !password) {
+      Alert.alert('Missing information', 'Please enter both email and password.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(email, password);
     } catch {
       Alert.alert('Login failed', 'Please try again');
     } finally {
       setLoading(false);
     }
+  };
+
+  const onInvalid = (_errors: FieldErrors<LoginForm>) => {
+    // Keep invalid form submissions from bubbling as uncaught errors in RN web.
+  };
+
+  const handleLoginPress = () => {
+    void handleSubmit(onSubmit, onInvalid)();
+  };
+
+  const handleGoogleLogin = async () => {
+    if (Platform.OS === 'web') {
+      setGoogleLoading(true);
+      try {
+        await loginWithGoogle();
+      } catch {
+        Alert.alert('Google sign-in failed', 'Please check Firebase Google sign-in settings and try again.');
+      } finally {
+        setGoogleLoading(false);
+      }
+      return;
+    }
+
+    Alert.alert('Google sign-in unavailable', 'Google sign-in on mobile is disabled in Expo Go. Use web for now.');
   };
 
   return (
@@ -53,6 +85,13 @@ export default function LoginScreen() {
       <Controller
         control={control}
         name="email"
+        rules={{
+          required: 'Email is required',
+          pattern: {
+            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: 'Invalid email',
+          },
+        }}
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
@@ -67,7 +106,7 @@ export default function LoginScreen() {
               ]}
               placeholder="Email"
               placeholderTextColor={palette.icon}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -79,6 +118,13 @@ export default function LoginScreen() {
       <Controller
         control={control}
         name="password"
+        rules={{
+          required: 'Password is required',
+          minLength: {
+            value: 6,
+            message: 'Password must be at least 6 characters',
+          },
+        }}
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
@@ -93,7 +139,7 @@ export default function LoginScreen() {
               ]}
               placeholder="Password"
               placeholderTextColor={palette.icon}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               secureTextEntry
             />
@@ -103,12 +149,27 @@ export default function LoginScreen() {
       />
       <TouchableOpacity
         style={[styles.button, { backgroundColor: palette.tint }, loading && styles.buttonDisabled]}
-        onPress={handleSubmit(onSubmit)}
+        onPress={handleLoginPress}
         disabled={loading}>
         {loading ? (
           <ActivityIndicator color={palette.textOnTint} />
         ) : (
           <Text style={[styles.buttonText, { color: palette.textOnTint }]}>Login</Text>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          styles.googleButton,
+          { borderColor: colorScheme === 'dark' ? '#666' : '#d0d0d0' },
+          googleLoading && styles.buttonDisabled,
+        ]}
+        onPress={() => void handleGoogleLogin()}
+        disabled={googleLoading}>
+        {googleLoading ? (
+          <ActivityIndicator color={palette.text} />
+        ) : (
+          <Text style={[styles.googleButtonText, { color: palette.text }]}>Continue with Google</Text>
         )}
       </TouchableOpacity>
       <TouchableOpacity style={styles.link} onPress={() => router.push('/register')}>
@@ -163,6 +224,15 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  googleButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   link: {
     marginTop: 20,

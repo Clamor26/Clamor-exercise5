@@ -40,6 +40,18 @@
         }
       ]
     ],
+    "extra": {
+      "firebaseApiKey": "AIzaSyBKFCF9iPUtesTw66kcptMN6DBqM2rGWYo",
+      "firebaseAuthDomain": "clamor-exercise7-be409.firebaseapp.com",
+      "firebaseProjectId": "clamor-exercise7-be409",
+      "firebaseStorageBucket": "clamor-exercise7-be409.firebasestorage.app",
+      "firebaseMessagingSenderId": "121499381204",
+      "firebaseAppId": "1:121499381204:web:05eed90293b893d1033a41",
+      "googleExpoClientId": "YOUR_GOOGLE_EXPO_CLIENT_ID",
+      "googleAndroidClientId": "YOUR_GOOGLE_ANDROID_CLIENT_ID",
+      "googleIosClientId": "YOUR_GOOGLE_IOS_CLIENT_ID",
+      "googleWebClientId": "121499381204-n2riahaqq7rab70ibauqpjj73ccujfoo.apps.googleusercontent.com"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

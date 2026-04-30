@@ -1,28 +1,19 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import React from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Controller, FieldErrors, useForm } from 'react-hook-form';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { z } from 'zod';
 
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '../contexts/AuthContext';
 
-const registerSchema = z
-  .object({
-    email: z.string().email('Invalid email'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  });
-
-type RegisterForm = z.infer<typeof registerSchema>;
+type RegisterForm = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 const inputStyle = (palette: (typeof Colors)['light'], scheme: 'light' | 'dark', hasError?: boolean) => [
   styles.input,
@@ -34,8 +25,9 @@ const inputStyle = (palette: (typeof Colors)['light'], scheme: 'light' | 'dark',
 ];
 
 export default function RegisterScreen() {
-  const { register } = useAuth();
+  const { register, registerWithGoogle } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -43,20 +35,60 @@ export default function RegisterScreen() {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
+  const passwordValue = watch('password');
 
   const onSubmit = async (data: RegisterForm) => {
+    const email = data.email.trim();
+    const password = data.password.trim();
+    const confirmPassword = data.confirmPassword.trim();
+
+    if (!email || !password || !confirmPassword) {
+      Alert.alert('Missing information', 'Please complete all required fields.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(data.email, data.password);
+      await register(email, password);
     } catch {
       Alert.alert('Registration failed', 'Please try again');
     } finally {
       setLoading(false);
     }
+  };
+
+  const onInvalid = (_errors: FieldErrors<RegisterForm>) => {
+    // Keep invalid form submissions from bubbling as uncaught errors in RN web.
+  };
+
+  const handleRegisterPress = () => {
+    void handleSubmit(onSubmit, onInvalid)();
+  };
+
+  const handleGoogleRegister = async () => {
+    if (Platform.OS === 'web') {
+      setGoogleLoading(true);
+      try {
+        await registerWithGoogle();
+        router.replace('/setup');
+      } catch {
+        Alert.alert('Google sign-up failed', 'Please check Firebase Google sign-in settings and try again.');
+      } finally {
+        setGoogleLoading(false);
+      }
+      return;
+    }
+
+    Alert.alert('Google sign-up unavailable', 'Google sign-up on mobile is disabled in Expo Go. Use web for now.');
   };
 
   return (
@@ -68,13 +100,20 @@ export default function RegisterScreen() {
       <Controller
         control={control}
         name="email"
+        rules={{
+          required: 'Email is required',
+          pattern: {
+            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: 'Invalid email',
+          },
+        }}
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
               style={inputStyle(palette, colorScheme, !!errors.email)}
               placeholder="Email"
               placeholderTextColor={palette.icon}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -86,13 +125,20 @@ export default function RegisterScreen() {
       <Controller
         control={control}
         name="password"
+        rules={{
+          required: 'Password is required',
+          minLength: {
+            value: 6,
+            message: 'Password must be at least 6 characters',
+          },
+        }}
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
               style={inputStyle(palette, colorScheme, !!errors.password)}
               placeholder="Password"
               placeholderTextColor={palette.icon}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               secureTextEntry
             />
@@ -103,13 +149,17 @@ export default function RegisterScreen() {
       <Controller
         control={control}
         name="confirmPassword"
+        rules={{
+          required: 'Confirm password is required',
+          validate: (value) => value === passwordValue || "Passwords don't match",
+        }}
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
               style={inputStyle(palette, colorScheme, !!errors.confirmPassword)}
               placeholder="Confirm Password"
               placeholderTextColor={palette.icon}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               secureTextEntry
             />
@@ -121,12 +171,27 @@ export default function RegisterScreen() {
       />
       <TouchableOpacity
         style={[styles.button, { backgroundColor: palette.tint }, loading && styles.buttonDisabled]}
-        onPress={handleSubmit(onSubmit)}
+        onPress={handleRegisterPress}
         disabled={loading}>
         {loading ? (
           <ActivityIndicator color={palette.textOnTint} />
         ) : (
           <Text style={[styles.buttonText, { color: palette.textOnTint }]}>Register</Text>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          styles.googleButton,
+          { borderColor: colorScheme === 'dark' ? '#666' : '#d0d0d0' },
+          googleLoading && styles.buttonDisabled,
+        ]}
+        onPress={() => void handleGoogleRegister()}
+        disabled={googleLoading}>
+        {googleLoading ? (
+          <ActivityIndicator color={palette.text} />
+        ) : (
+          <Text style={[styles.googleButtonText, { color: palette.text }]}>Continue with Google</Text>
         )}
       </TouchableOpacity>
       <TouchableOpacity style={styles.link} onPress={() => router.push('/login')}>
@@ -178,6 +243,15 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  googleButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   link: {
     marginTop: 20,
